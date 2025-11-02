@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Breast Cancer Prediction API</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            min-height: 100vh;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+        #container {
+            width: 90%;
+            max-width: 600px;
+            padding: 2rem;
+            background-color: #ffffff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
+            text-align: center;
+        }
+        h1 {
+            color: #1a237e;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            margin-top: 1rem;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            box-sizing: border-box; /* Important for padding to work well */
+        }
+        button {
+            background-color: #3949ab;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 1rem;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #283593;
+        }
+        #result {
+            margin-top: 1.5rem;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        .error {
+            color: #c62828;
+        }
+        .success {
+            color: #2e7d32;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="container">
+        <h1>Cancer Predictor 🩺</h1>
+        <p>Paste your 30 comma-separated feature values below:</p>
+        
+        <textarea id="featureInput" placeholder="e.g., 13.54, 14.36, 87.46, 566.3, 0.09779, ... (30 values total)"></textarea>
+        
+        <button id="predictButton">Get Prediction</button>
+        
+        <div id="result">
+            </div>
+    </div>
+
+    <script>
+        // Get references to the HTML elements
+        const predictButton = document.getElementById('predictButton');
+        const featureInput = document.getElementById('featureInput');
+        const resultDiv = document.getElementById('result');
+
+        // Add a click event listener to the button
+        predictButton.addEventListener('click', () => {
+            
+           
+            const apiUrl = 'https://my-ml-api-v45y.onrender.com/predict'; 
+            
+
+            // --- 2. Get and Process the Input ---
+            const inputText = featureInput.value;
+            
+            // Convert the comma-separated string into an array of numbers
+            const features = inputText.split(',')
+                                    .map(val => parseFloat(val.trim()))
+                                    .filter(val => !isNaN(val)); // Remove any bad values
+
+            // --- 3. Validate the Input ---
+            if (features.length !== 30) {
+                resultDiv.innerHTML = 'Error: Please enter exactly 30 comma-separated numbers.';
+                resultDiv.className = 'error';
+                return; // Stop the function
+            }
+
+            // --- 4. Prepare Data for the API ---
+            const requestBody = {
+                features: features
+            };
+
+            // Show loading state
+            resultDiv.innerHTML = 'Getting prediction...';
+            resultDiv.className = '';
+
+            // --- 5. Call the API using fetch() ---
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    // Handle HTTP errors (like 400, 500)
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json(); // Parse the JSON response
+            })
+            .then(data => {
+                // --- 6. Display the Successful Result ---
+                if (data.label) {
+                    const confidencePercent = (parseFloat(data.confidence) * 100).toFixed(2);
+                    resultDiv.innerHTML = `Prediction: ${data.label} (Confidence: ${confidencePercent}%)`;
+                    
+                    // Add success/error styling
+                    resultDiv.className = (data.label === 'Malignant') ? 'error' : 'success';
+                } else {
+                    // Handle cases where the API returns a weird response
+                    resultDiv.innerHTML = 'Error: Received an invalid response from API.';
+                    resultDiv.className = 'error';
+                }
+            })
+            .catch(error => {
+                // --- 7. Display Fetch or Network Errors ---
+                console.error('Fetch error:', error);
+                resultDiv.innerHTML = `Error: Could not connect to API. ${error.message}`;
+                resultDiv.className = 'error';
+            });
+        });
+    </script>
+
+</body>
+</html>
